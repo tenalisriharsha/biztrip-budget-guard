@@ -1,0 +1,25 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.env
+backend/*.db
+backend/biztrip.db
+backend/server.log
+backend/test_all.py
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
