@@ -148,7 +148,7 @@ export default function ForecastForm({ onTripCreated }) {
         <div style={cardStyle}>
           <h3>Forecast Result</h3>
           <p><strong>Trip ID:</strong> {result.trip_id}</p>
-          <p><strong>Destination:</strong> {result.destination}</p>
+          <p><strong>Destination:</strong> {result.destination_name || result.destination}</p>
           <p><strong>Total Estimate:</strong> {result.total_estimate.toFixed(2)} {result.currency}</p>
           <p><strong>Range:</strong> {result.total_low.toFixed(2)} - {result.total_high.toFixed(2)} {result.currency}</p>
           <p><strong>Confidence:</strong> {(result.overall_confidence * 100).toFixed(0)}%</p>

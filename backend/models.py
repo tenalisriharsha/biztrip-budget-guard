@@ -31,6 +31,7 @@ class ForecastResponse(BaseModel):
     """Response body for pre-trip budget forecast."""
     trip_id: int
     destination: str
+    destination_name: str = ""
     start_date: date
     end_date: date
     traveler_level: str

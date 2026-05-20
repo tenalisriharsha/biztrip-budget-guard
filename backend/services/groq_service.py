@@ -15,12 +15,13 @@ if settings.groq_api_key:
     _client = Groq(api_key=settings.groq_api_key)
 
 
-def _fallback_summary(destination: str, total_estimate: float, currency: str,
+def _fallback_summary(destination: str, destination_name: str, total_estimate: float, currency: str,
                       confidence: float, items: list) -> str:
     """Rule-based fallback forecast summary."""
     level = "high" if confidence >= 0.8 else "moderate" if confidence >= 0.6 else "low"
+    place = destination_name if destination_name else destination
     return (
-        f"Your trip to {destination} is estimated at {total_estimate:.2f} {currency} "
+        f"Your trip to {place} is estimated at {total_estimate:.2f} {currency} "
         f"with {level} confidence ({confidence:.0%}). "
         f"Key categories: {', '.join([i['category'] for i in items[:3]])}. "
         f"Book flights early for better rates."
@@ -56,15 +57,16 @@ def _fallback_anomaly_explanation(category: str, amount: float,
     )
 
 
-def generate_forecast_summary(destination: str, total_estimate: float, currency: str,
+def generate_forecast_summary(destination: str, destination_name: str, total_estimate: float, currency: str,
                                confidence: float, line_items: list) -> str:
     """Generate natural language forecast summary via Groq with fallback."""
     if not _client or not settings.enable_groq:
-        return _fallback_summary(destination, total_estimate, currency, confidence, line_items)
+        return _fallback_summary(destination, destination_name, total_estimate, currency, confidence, line_items)
 
+    place = destination_name if destination_name else destination
     prompt = (
         "You are a corporate travel budget assistant. Summarize this trip forecast briefly:\n"
-        f"Destination: {destination}\n"
+        f"Destination: {place} ({destination})\n"
         f"Total Estimate: {total_estimate:.2f} {currency}\n"
         f"Confidence: {confidence:.0%}\n"
         f"Categories:\n"
@@ -101,11 +103,11 @@ def generate_forecast_summary(destination: str, total_estimate: float, currency:
             )
             return response.choices[0].message.content.strip()
         except Exception:
-            return _fallback_summary(destination, total_estimate, currency, confidence, line_items)
+            return _fallback_summary(destination, destination_name, total_estimate, currency, confidence, line_items)
     except APIError:
-        return _fallback_summary(destination, total_estimate, currency, confidence, line_items)
+        return _fallback_summary(destination, destination_name, total_estimate, currency, confidence, line_items)
     except Exception:
-        return _fallback_summary(destination, total_estimate, currency, confidence, line_items)
+        return _fallback_summary(destination, destination_name, total_estimate, currency, confidence, line_items)
 
 
 def generate_alert_message(trip_id: int, category: str, budgeted: float,
