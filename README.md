@@ -1,4 +1,5 @@
 BizTrip Budget Guard
+
 Project Overview
 BizTrip Budget Guard is a full-stack AI-powered corporate travel budget management prototype built for BizTrip AI.
 The application helps finance teams and employees forecast trip costs before booking, track real-time spending against budgets during travel, and reconcile expenses after trips with statistical anomaly detection and AI-generated explanations.
