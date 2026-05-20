@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { postReconcile, fetchAnomalies, fetchTrips } from '../services/api'
 import AlertBanner from './AlertBanner'
+import PostTripDashboard from './PostTripDashboard'
 
 const cardStyle = {
   background: '#fff',
@@ -112,6 +113,14 @@ export default function ReconcileView({ tripId }) {
             </div>
           ))}
         </div>
+      )}
+
+      {result && (
+        <PostTripDashboard
+          tripId={selectedTrip}
+          anomalies={anomalies}
+          reconcileResult={result}
+        />
       )}
     </div>
   )
