@@ -301,4 +301,4 @@ GitHub: github.com/tenalisriharsha
 License
 Open source for demonstration purposes. Built entirely with free-tier tools and open-source libraries.
  
-Built for BizTrip AI — disrupting corporate travel with intelligent budget management.
+Built for BizTrip AI — travel with intelligent budget management.
