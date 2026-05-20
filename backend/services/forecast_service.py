@@ -129,17 +129,30 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * c
 
 
+def _hash_code(code: str) -> int:
+    """Deterministic hash of a 3-letter IATA code for pseudo-random fallbacks."""
+    return sum(ord(c) * (i + 1) * 31 for i, c in enumerate(code.upper()))
+
+
 def _get_city_tier(destination: str) -> int:
-    """Return cost-of-living tier for a city code. Defaults to tier 3."""
+    """Return cost-of-living tier for a city code. Unknown codes get a hashed tier."""
     code = destination[:3].upper()
-    return CITY_DB.get(code, {}).get("tier", 3)
+    if code in CITY_DB:
+        return CITY_DB[code]["tier"]
+    # Deterministic pseudo-random tier based on code hash
+    return (_hash_code(code) % 4) + 1
 
 
 def _get_city_coords(destination: str) -> tuple:
-    """Return (lat, lon) for a city code. Defaults to NYC."""
+    """Return (lat, lon) for a city code. Unknown codes get hashed global coordinates."""
     code = destination[:3].upper()
-    data = CITY_DB.get(code, {})
-    return (data.get("lat", 40.71), data.get("lon", -74.01))
+    if code in CITY_DB:
+        return (CITY_DB[code]["lat"], CITY_DB[code]["lon"])
+    h = _hash_code(code)
+    # Generate pseudo-random lat/lon anywhere on Earth (avoid poles for realism)
+    lat = ((h % 14000) / 100) - 60   # -60 to +80
+    lon = ((h // 10000) % 36000) / 100 - 180  # -180 to +180
+    return (lat, lon)
 
 
 def _estimate_flight(origin: str, destination: str) -> Dict[str, float]:
