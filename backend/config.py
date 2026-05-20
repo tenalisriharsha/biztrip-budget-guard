@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     amadeus_api_key: str = ""
     amadeus_api_secret: str = ""
     tequila_api_key: str = ""
+    aviationstack_api_key: str = ""
     exchange_rate_api_key: str = ""
 
     # Feature Flags & Fallbacks

@@ -129,29 +129,107 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * c
 
 
+# Simple in-memory cache for Aviationstack lookups
+_aviationstack_cache: Dict[str, Dict[str, Any]] = {}
+
+
 def _hash_code(code: str) -> int:
     """Deterministic hash of a 3-letter IATA code for pseudo-random fallbacks."""
     return sum(ord(c) * (i + 1) * 31 for i, c in enumerate(code.upper()))
 
 
+def _lookup_airport_aviationstack(code: str) -> Optional[Dict[str, Any]]:
+    """
+    Look up real airport coordinates via Aviationstack API.
+    Returns dict with lat, lon, city, country or None.
+    Free tier: 100 calls/month.
+    """
+    if not settings.aviationstack_api_key:
+        return None
+    if code in _aviationstack_cache:
+        return _aviationstack_cache[code]
+    try:
+        resp = requests.get(
+            "https://api.aviationstack.com/v1/airports",
+            params={
+                "access_key": settings.aviationstack_api_key,
+                "iata_code": code,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        airports = data.get("data", [])
+        if airports:
+            ap = airports[0]
+            result = {
+                "lat": float(ap.get("latitude", 0)),
+                "lon": float(ap.get("longitude", 0)),
+                "city": ap.get("city", ""),
+                "country": ap.get("country_name", ""),
+            }
+            _aviationstack_cache[code] = result
+            return result
+    except Exception:
+        pass
+    return None
+
+
+def _country_to_tier(country: str) -> int:
+    """Rough cost-of-living tier based on country name."""
+    tier1 = {"united states", "united kingdom", "switzerland", "japan", "singapore",
+             "australia", "united arab emirates", "hong kong", "norway", "denmark",
+             "netherlands", "sweden", "luxembourg", "finland", "iceland", "ireland",
+             "austria", "belgium", "france", "germany", "canada", "new zealand",
+             "italy", "spain", "south korea", "israel"}
+    tier2 = {"portugal", "czech republic", "greece", "estonia", "slovenia",
+             "poland", "hungary", "slovakia", "lithuania", "latvia", "croatia",
+             "romania", "bulgaria", "serbia", "chile", "uruguay", "argentina",
+             "panama", "costa rica", "malaysia", "thailand", "china", "taiwan",
+             "turkey", "russia", "qatar", "kuwait", "bahrain", "saudi arabia",
+             "oman", "jordan", "lebanon", "south africa", "mauritius", "seychelles"}
+    tier4 = {"india", "indonesia", "vietnam", "philippines", "bangladesh", "pakistan",
+             "nepal", "sri lanka", "myanmar", "cambodia", "laos", "mongolia",
+             "nigeria", "kenya", "ethiopia", "ghana", "uganda", "tanzania",
+             "zimbabwe", "zambia", "cameroon", "ivory coast", "senegal", "mali",
+             "bolivia", "ecuador", "paraguay", "venezuela", "honduras", "guatemala",
+             "nicaragua", "el salvador", "haiti", "cuba", "dominican republic"}
+    c = country.lower().strip()
+    if c in tier1:
+        return 1
+    if c in tier2:
+        return 2
+    if c in tier4:
+        return 4
+    return 3
+
+
 def _get_city_tier(destination: str) -> int:
-    """Return cost-of-living tier for a city code. Unknown codes get a hashed tier."""
+    """Return cost-of-living tier for a city code."""
     code = destination[:3].upper()
     if code in CITY_DB:
         return CITY_DB[code]["tier"]
-    # Deterministic pseudo-random tier based on code hash
+    # Try Aviationstack country lookup
+    ap = _lookup_airport_aviationstack(code)
+    if ap and ap.get("country"):
+        return _country_to_tier(ap["country"])
+    # Fallback: deterministic hash
     return (_hash_code(code) % 4) + 1
 
 
 def _get_city_coords(destination: str) -> tuple:
-    """Return (lat, lon) for a city code. Unknown codes get hashed global coordinates."""
+    """Return (lat, lon) for a city code."""
     code = destination[:3].upper()
     if code in CITY_DB:
         return (CITY_DB[code]["lat"], CITY_DB[code]["lon"])
+    # Try Aviationstack for real coordinates
+    ap = _lookup_airport_aviationstack(code)
+    if ap and ap.get("lat") and ap.get("lon"):
+        return (ap["lat"], ap["lon"])
+    # Fallback: deterministic pseudo-random coordinates
     h = _hash_code(code)
-    # Generate pseudo-random lat/lon anywhere on Earth (avoid poles for realism)
-    lat = ((h % 14000) / 100) - 60   # -60 to +80
-    lon = ((h // 10000) % 36000) / 100 - 180  # -180 to +180
+    lat = ((h % 14000) / 100) - 60
+    lon = ((h // 10000) % 36000) / 100 - 180
     return (lat, lon)
 
 
